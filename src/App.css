@@ -1,0 +1,69 @@
+.auth-card {
+    min-height: 100vh;
+}
+
+.auth-title {
+    font-size: 20px;
+    line-height: 18px;
+    font-weight: 500;
+}
+
+.show-password-button {
+    position: absolute;
+    padding: 0.3rem 0.4rem;
+    inset-block-start: 5px;
+    inset-inline-end: 5px;
+    background-color: var(--primary-mid-tint);
+    border-radius: 0.3rem;
+}
+
+.forgot-password {
+    color: var(--primary-ext-shade);
+}
+
+.btn-gradient {
+    color: #fff;
+    background: #3F5EFB;
+    background: radial-gradient(circle, rgba(63, 94, 251, 1) 0%, rgba(252, 70, 107, 1) 100%);
+}
+.textarea-container {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .voice-textarea {
+    width: 100%;
+    height: 100px;
+    padding-right: 100px; /* Leave space for the mic and stop buttons */
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+  
+  .mic-button, .stop-button {
+    position: absolute;
+    bottom: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    padding: 5px;
+    margin: 0 5px;
+  }
+  
+  .mic-button {
+    right: 60px;
+  }
+  
+  .stop-button {
+    right: 10px;
+  }
+  
+  .mic-button:hover, .stop-button:hover {
+    transform: scale(1.1);
+  }
+  
+  .sound-wave {
+    margin-top: 20px;
+  }
+  

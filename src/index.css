@@ -1,0 +1,37 @@
+/* font config  */
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+    --primary-rgb: #3073b6;
+    --white: #ffffff;
+    --primary-mid-tint: #98b9db;
+    --primary-ext-shade: #050b12
+}
+
+
+body {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 12px;
+    box-sizing: border-box;
+    background-color: #fafafa;
+}
+
+label, p {
+    font-size: 14px;
+}
+
+a {
+    text-decoration: none;
+}
+
+
+/* Bootstrap overrides */
+.btn-primary {
+    background-color: var(--primary-rgb) !important;
+    border-color: var(--primary-rgb) !important;
+    color: #fff !important;
+}
+
+.text-primary {
+    color: var(--primary-rgb) !important;
+}
