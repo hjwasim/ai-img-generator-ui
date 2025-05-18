@@ -2,56 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { instance } from "../../config,axios";
 import { getSub } from "../authentication/util/auth.helper";
-import { FaMicrophone } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const ImageGenerationPage = () => {
   const subject = getSub();
   const [loading, setLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedBlob, setRecordedBlob] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [imageUrl, setImageUrl] = useState(null);
-  const [prompts, setPrompts] = useState([]);
-  const audioChunks = useRef<Blob[]>([]);
+  const [prompts, setPrompts] = useState<{prompt:string}[]>([]);
 
   const navigate = useNavigate();
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      mediaRecorderRef.current = new MediaRecorder(stream);
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunks.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setRecordedBlob(audioUrl);
-        audioChunks.current = [];
-        stream.getTracks().forEach((track) => track.stop()); // Stop all tracks
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm();
 
@@ -64,12 +28,83 @@ const ImageGenerationPage = () => {
     }
   };
 
+  /* 
+   -----------------------------
+   Voice to Text Module
+   -----------------------------
+  */
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition>(null);
+
+  const startListening = () => {
+    if (!recognitionRef.current) {
+      console.error(
+        "SpeechRecognition is not available. Ensure your browser supports it."
+      );
+      return;
+    }
+    setIsListening(true);
+    recognitionRef.current.start();
+  };
+
+  const stopListening = () => {
+    if (!recognitionRef.current) {
+      console.error(
+        "SpeechRecognition instance is not available. Ensure your browser supports it."
+      );
+      return;
+    }
+    setIsListening(false);
+    recognitionRef.current.stop();
+  };
+
+  /* 
+   -----------------------------
+    UseEffect
+   -----------------------------
+  */
   useEffect(() => {
     if (subject) {
       fetchPrompts();
     }
+
+    /* Voice to Text */
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.warn("SpeechRecognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      const result = event.results[event.results.length - 1][0].transcript;
+      setValue("prompt", result);
+    };
+
+    recognitionRef.current = recognition;
+
+    // cleanups
+    return () => {
+      recognition.abort();
+    };
   }, [imageUrl, subject]);
 
+  const isSupported =
+    !!window.SpeechRecognition || !!window.webkitSpeechRecognition;
+
+  if (!isSupported) {
+    return (
+      <p>Your browser doesn't support voice search. Please type your query.</p>
+    );
+  }
+
+  /* Form submission functionality */
   const onSubmit = async (data: unknown | { prompt: string }) => {
     setLoading(true);
     const prompt = (data as { prompt: string }).prompt;
@@ -77,6 +112,7 @@ const ImageGenerationPage = () => {
       const response = await instance.post("/image/generate_image", { prompt });
       const image = response.data.image_url;
       setImageUrl(image);
+      setValue("prompt", "");
 
       // Add the new prompt to the list
       await instance.post("/user/track_prompt", { username: subject, prompt });
@@ -88,6 +124,7 @@ const ImageGenerationPage = () => {
     }
   };
 
+  /* Logout functionality */
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     navigate("/login");
@@ -99,7 +136,9 @@ const ImageGenerationPage = () => {
         <div className="d-flex justify-content-between">
           <div style={{ fontSize: "1.2rem" }}>AI Image Gen</div>
           <div>
-            <button className="btn btn-danger btn-sm" onClick={handleLogout}>Logout</button>
+            <button className="btn btn-danger btn-sm" onClick={handleLogout}>
+              Logout
+            </button>
           </div>
         </div>
       </nav>
@@ -120,31 +159,37 @@ const ImageGenerationPage = () => {
                         {...register("prompt", { required: true })}
                         style={{ resize: "none" }}
                       />
-                      <button
-                        className="mic-button"
-                        onClick={startRecording}
-                        disabled={isRecording}
-                      >
-                        <FaMicrophone color={isRecording ? "red" : "black"} />
-                      </button>
-                      <button
-                        className="stop-button"
-                        onClick={stopRecording}
-                        disabled={!isRecording}
-                      >
-                        Stop
-                      </button>
+                      <div className="d-flex gap-4">
+                        <button
+                          onClick={startListening}
+                          disabled={isListening}
+                          className="mic-button"
+                        >
+                          🎙️ Start Voice Search
+                        </button>
+
+                        <button
+                          onClick={stopListening}
+                          disabled={!isListening}
+                          className="stop-button"
+                        >
+                          🛑 Stop
+                        </button>
+
+                        <p
+                          style={{
+                            fontSize: "18px",
+                            marginTop: "20px",
+                            color: "#333",
+                          }}
+                        ></p>
+                      </div>
                       {errors.textareaField && (
                         <span className="text-danger">
                           This field is required
                         </span>
                       )}
                     </div>
-                    {/* {recordedBlob && (
-                      <audio controls src={recordedBlob}>
-                        Your browser does not support the audio element.
-                      </audio>
-                    )} */}
                   </div>
                   <button
                     type="submit"
@@ -168,7 +213,17 @@ const ImageGenerationPage = () => {
                 <hr></hr>
                 {imageUrl && (
                   <div>
-                    <h5 className="my-4">Generated Image</h5>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h5 className="my-4">Generated Image</h5>
+
+                      <a
+                        href={imageUrl}
+                        target="_blank"
+                        download="my-picture.jpg"
+                      >
+                        <button className="btn btn-success btn-sm">Download</button>
+                      </a>
+                    </div>
                     <img
                       src={imageUrl}
                       className="img-fluid"
